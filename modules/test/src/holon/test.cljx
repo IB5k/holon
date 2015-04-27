@@ -22,11 +22,11 @@
 
 #+clj
 (defmacro with-system
-  [start system & body]
+  [system & body]
   `(let [start# (or (::start (meta ~system))
                     (if-cljs
-                     com.stuartsierra.component/start
-                     quile.component/start))
+                     'com.stuartsierra.component/start
+                     'quile.component/start))
          s# (start# ~system)]
      (try
        (binding [*system* s#] ~@body)
@@ -34,7 +34,7 @@
          (component/stop s#)))))
 
 (defn with-system-fixture
-  [start system]
+  [system]
   (fn [f]
     (with-system (system)
       (f))))
