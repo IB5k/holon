@@ -28,7 +28,7 @@ constructor. The value can be key or vector of keys, representing the
                                         (cond (keyword? path) [path]
                                               (vector? path) path))))]
                   (cond
-                    (and (= dv :modular.maker/required) (nil? v))
+                    (and (= dv :holon.maker/required) (nil? v))
                     (throw (ex-info "Configuration value required but couldn't be found" {:key-or-mapping k}))
                     (keyword? k) [k (if (nil? v) dv v)]
                     (associative? k) [(ffirst (seq k)) (if (nil? v) dv v)])))
