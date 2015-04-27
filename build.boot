@@ -1,6 +1,5 @@
 (task-options!
- pom {:description "components"
-      :license {"Eclipse Public License" "http://www.eclipse.org/legal/epl-v10.html"}
+ pom {:license {"Eclipse Public License" "http://www.eclipse.org/legal/epl-v10.html"}
       :url "https://github.com/ib5k/holon"
       :scm {:url "https://github.com/ib5k/holon"}})
 
@@ -14,6 +13,16 @@
                    :clojurescript
                    :component
                    :schema]}
+   :component
+   {:project 'ib5k.holon/component
+    :version "0.1.0-SNAPSHOT"
+    :description "utils for component systems"
+    :root "modules/component"
+    :dependencies [:clojure
+                   :clojurescript
+                   :component
+                   :schema
+                   :aop]}
    :test
    {:project 'ib5k.holon/test
     :version "0.1.0-SNAPSHOT"
@@ -21,14 +30,18 @@
     :root "modules/test"
     :dependencies [:clojure
                    :clojurescript
-                   :component]}})
+                   :component
+                   [:holon :component]]}})
 
 (def dependencies
   (merge
    {:holon          (->> (for [[k {:keys [project version]}] modules]
-                           [k [project version]])
+                           [k [[project version]]])
                          (into {}))}
-   '{:async         [[org.clojure/core.async "0.1.346.0-17112a-alpha"]]
+   '{:aop           [[tangrammer/co-dependency "0.1.5"]
+                     [milesian/aop "0.1.5"]
+                     [milesian/identity "0.1.4"]]
+     :async         [[org.clojure/core.async "0.1.346.0-17112a-alpha"]]
      :boot          [[adzerk/bootlaces "0.1.11"]
                      [adzerk/boot-cljs "0.0-2814-4"]
                      [adzerk/boot-cljs-repl "0.1.10-SNAPSHOT"]
@@ -38,8 +51,7 @@
                      [deraen/boot-cljx "0.2.2"]
                      [ib5k/boot-component "0.1.2-SNAPSHOT"]
                      [jeluard/boot-notify "0.1.2"]]
-     :clojure       [[org.clojure/clojure "1.7.0-beta1"]
-                     [org.clojure/core.match "0.3.0-alpha4"]]
+     :clojure       [[org.clojure/clojure "1.7.0-beta1"]]
      :clojurescript [[org.clojure/clojurescript "0.0-3211"]]
      :component
      {:clj          [[com.stuartsierra/component "0.2.3"]]
@@ -135,13 +147,12 @@
 
 (deftask module
   "set environment for a module"
-  [m id  KEYWORD kw "The id of the component"]
+  [m id KEYWORD kw "The id of the component"]
   (let [{:keys [version root] :as module} (get modules id)]
     (task-options!
-     pom (select-keys module [:project :version]))
+     pom #(merge % (select-keys module [:project :version :description])))
     (bootlaces! version)
     (-> module
-        (select-keys [:dependencies :root])
         (assoc :source-paths #(conj % (str root "/src")))
         (update :dependencies (fn [deps]
                                 #(->> deps
@@ -149,7 +160,8 @@
                                       (concat %)
                                       (vec))))
         (->> (mapcat identity)
-             (apply set-env!)))))
+             (apply set-env!)))
+    identity))
 
 (deftask test-all
   "test clj and cljs"
