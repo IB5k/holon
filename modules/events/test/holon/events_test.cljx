@@ -18,11 +18,33 @@
 
 (use-fixtures :once schema.test/validate-schemas)
 
-(defn components [config]
-  {})
+(defrecord TestHandler []
+  events/EventHandler
+  (event-handlers [_]
+    {:submit-number (fn [n]
+                      n)}))
+
+(defrecord TestProducer []
+  events/EventProducer
+  (events [_]
+    {:submit-number [s/Num]}))
+
+(def components
+  {:event-dispatcher
+   {:cmp (events/new-event-handler-aggregator)
+    :using [(s/protocol events/EventHandler)]}
+   :handler
+   {:cmp (events/new-event-producer ->TestHandler)}
+   :producer
+   {:cmp (events/new-event-producer ->TestProducer)}})
 
 (defn new-test-system
   []
-  (new-system (components {})))
+  (-> components
+      new-system
+      (with-meta {:holon.test/start start})))
 
-(with-system (new-test-system))
+(deftest dispatcher
+  (is
+   (with-system (new-test-system)
+     (:handler (:event-dispatcher *system*)))))

@@ -4,7 +4,6 @@
             [#+clj  com.stuartsierra.component
              #+cljs quile.component
              :as component :refer [Lifecycle]]
-            [ib5k.component.ctr :as ctr]
             #+clj  [schema.core :as s]
             #+cljs [schema.core :as s :include-macros true]))
 
@@ -57,8 +56,3 @@
   (stop [this] this)
   p/EventHandler
   (event-handlers [this] (:handlers this)))
-
-(def new-event-handler-aggregator
-  (-> map->EventHandlerAggregator
-      (ctr/wrap-class-validation EventHandlerAggregator)
-      (ctr/wrap-kargs)))
