@@ -83,7 +83,16 @@
      :cljs         [[com.andrewmcveigh/cljs-time "0.3.3"]]}
     :viz           [[rhizome "0.2.4"]]})
 
-(def modules {})
+(def modules
+  {:events
+   {:project 'ib5k.holon/events
+    :version "0.1.0-SNAPSHOT"
+    :description "event dispatcher"
+    :root "modules/events"
+    :dependencies [:clojure
+                   :clojurescript
+                   :component
+                   :schema]}})
 
 (defn make-korks [korks]
   (cond-> korks
