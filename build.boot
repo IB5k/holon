@@ -12,7 +12,8 @@
     :dependencies [:clojure
                    :clojurescript
                    :component
-                   :schema]}
+                   :schema]
+    :test-namespaces '[holon.events-test]}
    :component
    {:project 'ib5k.holon/component
     :version "0.1.0-SNAPSHOT"
@@ -22,7 +23,9 @@
                    :clojurescript
                    :component
                    :schema
-                   :aop]}
+                   :aop]
+    :test-namespaces '[holon.maker-test
+                       holon.component-test]}
    :test
    {:project 'ib5k.holon/test
     :version "0.1.0-SNAPSHOT"
@@ -145,15 +148,20 @@
  '[deraen.boot-cljx           :refer :all]
  '[jeluard.boot-notify        :refer :all])
 
+(task-options!
+ cljs {:compiler-options {:warnings {:single-segment-namespace false}}})
+
 (deftask module
   "set environment for a module"
   [m id KEYWORD kw "The id of the component"]
-  (let [{:keys [version root] :as module} (get modules id)]
+  (let [{:keys [version root test-namespaces] :as module} (get modules id)]
     (task-options!
-     pom #(merge % (select-keys module [:project :version :description])))
+     pom #(merge % (select-keys module [:project :version :description]))
+     cljs-test-node-runner {:namespaces test-namespaces})
     (bootlaces! version)
     (-> module
         (assoc :source-paths #(conj % (str root "/src")))
+        (assoc :resource-paths #(conj % (str root "/src")))
         (update :dependencies (fn [deps]
                                 #(->> deps
                                       (apply (partial build-deps dependencies))
@@ -168,6 +176,7 @@
   []
   (let [root (get-env :root)]
     (set-env! :source-paths #(conj % (str root "/test")))
+    (set-env! :resource-paths #(conj % (str root "/test")))
     (comp
      (cljx)
      (test)
@@ -181,7 +190,7 @@
   []
   (let [root (get-env :root)]
     (set-env! :source-paths #(conj % (str root "/test")))
-    (set-env! :resource-paths #(conj % (str root "/src") (str root "/test")))
+    (set-env! :resource-paths #(conj % (str root "/test")))
     (comp
      (watch)
      (notify)
