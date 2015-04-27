@@ -3,7 +3,7 @@
              #+cljs quile.component
              :as component :refer [system-map system-using using]])
   #+cljs
-  (:require-macros [holon.test]))
+  (:require-macros [holon.test :refer (with-system)]))
 
 (def ^:dynamic *system* nil)
 
@@ -25,13 +25,16 @@
   [system & body]
   `(let [start# (or (::start (meta ~system))
                     (if-cljs
-                     'com.stuartsierra.component/start
-                     'quile.component/start))
+                     ~'quile.component/start
+                     ~'com.stuartsierra.component/start))
+         stop# (if-cljs
+                ~'quile.component/stop
+                ~'com.stuartsierra.component/stop)
          s# (start# ~system)]
      (try
        (binding [*system* s#] ~@body)
        (finally
-         (component/stop s#)))))
+         (stop# s#)))))
 
 (defn with-system-fixture
   [system]

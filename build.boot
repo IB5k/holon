@@ -129,7 +129,7 @@
  :source-paths #{}
  :resource-paths #{}
  :dependencies (fn [deps]
-                 (->> (build-deps dependencies :boot :test [:holon :test])
+                 (->> (build-deps dependencies :boot :test [:holon :test] :component)
                       (mapv #(conj % :scope "test"))
                       (concat deps)
                       vec)))
