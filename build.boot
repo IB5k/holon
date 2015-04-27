@@ -7,8 +7,6 @@
 (def boot-deps '[[adzerk/bootlaces "0.1.11"]
                  [adzerk/boot-cljs "0.0-2814-4"]
                  [adzerk/boot-cljs-repl "0.1.10-SNAPSHOT"]
-                 [pandeiro/boot-http "0.6.2"]
-                 [adzerk/boot-reload "0.2.6"]
                  [adzerk/boot-test "1.0.4"]
                  [boot-cljs-test/node-runner "0.1.0"]
                  [boot-garden "1.2.5-2"]
@@ -22,8 +20,11 @@
 (set-env!
  :source-paths #{}
  :resource-paths #{}
- :dependencies (->> (concat boot-deps test-deps)
-                    (mapv #(conj % :scope "test"))))
+ :dependencies (fn [deps]
+                 (->> (concat boot-deps test-deps)
+                      (mapv #(conj % :scope "test"))
+                      (concat deps)
+                      vec)))
 
 (def deps '{:async         [[org.clojure/core.async "0.1.346.0-17112a-alpha"]]
             :clojure       [[org.clojure/clojure "1.7.0-beta1"]
@@ -107,14 +108,12 @@
  '[adzerk.bootlaces           :refer :all]
  '[adzerk.boot-cljs           :refer :all]
  '[adzerk.boot-cljs-repl      :refer :all]
- '[adzerk.boot-reload         :refer :all]
  '[adzerk.boot-test           :refer [test]]
  '[boot-cljs-test.node-runner :refer :all]
  '[boot-garden.core           :refer :all]
  '[boot-component.reloaded    :refer :all]
  '[deraen.boot-cljx           :refer :all]
- '[jeluard.boot-notify        :refer :all]
- '[pandeiro.boot-http         :refer [serve]])
+ '[jeluard.boot-notify        :refer :all])
 
 (task-options!
  cljs {:source-map true})
@@ -122,14 +121,17 @@
 (deftask module
   "set environment for a module"
   [m id  KEYWORD kw "The id of the component"]
-  (let [{:keys [version] :as module} (get modules id)]
+  (let [{:keys [version root] :as module} (get modules id)]
     (task-options!
      pom (select-keys module [:project :version]))
     (-> module
-        (select-keys [:source-paths :asset-paths :resource-paths :dependencies])
-        (update :dependencies (fn->> (apply (partial build-deps deps))
-                                     (concat dev-deps)
-                                     (vec)))
+        (select-keys [:dependencies :root])
+        (assoc :source-paths #(conj % (str root "/src")))
+        (update :dependencies (fn [deps]
+                                #(->> deps
+                                      (apply (partial build-deps deps))
+                                      (concat %)
+                                      (vec))))
         (->> (mapcat identity)
              (apply set-env!)))
     (bootlaces! version)))
@@ -137,27 +139,27 @@
 (deftask test-all
   "test clj and cljs"
   []
-  (set-env! :source-paths #(conj % "test"))
-  (comp
-   (cljx)
-   (cljs-test-node-runner)
-   (cljs :source-map true
-         :pretty-print true)
-   (test)
-   (run-cljs-test)))
+  (let [root (get-env :root)]
+    (set-env! :source-paths #(conj % (str root "/test")))
+    (comp
+     (cljx)
+     (test)
+     (cljs-test-node-runner)
+     (cljs :source-map true
+           :pretty-print true)
+     (run-cljs-test))))
 
 (deftask dev
-  "watch and compile cljx, css, cljs, init cljs-repl and push changes to browser"
+  "watch and compile cljx, cljs, init cljs-repl"
   []
-  (set-env! :source-paths #(conj % "dev" "test"))
-  (set-env! :resource-paths #(conj % "src" "test"))
-  (comp
-   (watch)
-   (notify)
-   (cljx)
-   (reload :port 3459)
-   (cljs-repl :port 3458)
-   (reload-system)
-   (garden :pretty-print true)
-   (cljs :source-map true
-         :pretty-print true)))
+  (let [root (get-env :root)]
+    (set-env! :source-paths #(conj % (str root "/test")))
+    (set-env! :resource-paths #(conj % (str root "/src") (str root "/test")))
+    (comp
+     (watch)
+     (notify)
+     (cljx)
+     (cljs-repl :port 3458)
+     (reload-system)
+     (cljs :source-map true
+           :pretty-print true))))
