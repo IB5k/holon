@@ -2,8 +2,11 @@
   (:require #+clj  [schema.core :as s]
             #+cljs [schema.core :as s :include-macros true]))
 
+(s/defschema EventKey
+  (s/one s/Any "event key"))
+
 (s/defschema Event
-  [(s/one s/Any "event key")
+  [EventKey
    s/Any])
 
 (s/defschema Lookup
