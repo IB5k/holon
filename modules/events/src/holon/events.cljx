@@ -9,9 +9,9 @@
 
 ;; ========== EventProducer ===========
 
-(s/defn events :- Lookup
-  [component :- (s/protocol EventProducer)]
-  (p/events component))
+(s/defn event-schema :- Lookup
+  [component :- (s/protocol p/EventProducer)]
+  (p/event-schema component))
 
 (s/defn new-event-producer :- (s/protocol EventProducer)
   [ctr :- (s/make-fn-schema [(s/protocol EventProducer)] [[s/Any]])
