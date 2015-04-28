@@ -52,8 +52,11 @@
 ;; taken from https://github.com/milesian/BigBang/blob/master/src/milesian/bigbang.clj
 (s/defn expand :- us/SystemMap
   [system-map :- us/SystemMap
-   {:keys [before-start after-start]} :- {(s/optional-key :before-start) [UpdateComponent]
-                                          (s/optional-key :after-start) [UpdateComponent]}]
+   {:keys [before-start
+           after-start]
+    :or {before-start []
+         after-start []}} :- {(s/optional-key :before-start) [UpdateComponent]
+                              (s/optional-key :after-start) [UpdateComponent]}]
   (let [on-start-sequence (apply conj before-start (cons [component/start] after-start))
         start (fn [c & args]
                 (apply (->> on-start-sequence
