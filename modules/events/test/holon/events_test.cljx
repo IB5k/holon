@@ -1,5 +1,6 @@
 (ns holon.events-test
   (:require [holon.events :as events]
+            [holon.events.protocols :as p]
             [holon.test
              :refer (#+clj with-system with-system-fixture *system*)
              #+cljs
@@ -19,20 +20,20 @@
 (use-fixtures :once schema.test/validate-schemas)
 
 (defrecord TestHandler []
-  events/EventHandler
+  p/EventHandler
   (event-handlers [_]
     {:submit-number (fn [n]
                       n)}))
 
 (defrecord TestProducer []
-  events/EventProducer
+  p/EventProducer
   (events [_]
     {:submit-number [s/Num]}))
 
 (def components
   {:event-dispatcher
    {:cmp (events/new-event-handler-aggregator)
-    :using [(s/protocol events/EventHandler)]}
+    :using [(s/protocol p/EventHandler)]}
    :handler
    {:cmp (events/new-event-producer ->TestHandler)}
    :producer

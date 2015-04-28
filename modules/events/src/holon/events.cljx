@@ -9,8 +9,6 @@
 
 ;; ========== EventProducer ===========
 
-(def EventProducer p/EventProducer)
-
 (s/defn events :- Lookup
   [component :- (s/protocol EventProducer)]
   (p/events component))
@@ -21,8 +19,6 @@
   (apply ctr args))
 
 ;; ========== EventHandler ===========
-
-(def EventHandler p/EventHandler)
 
 (s/defn event-handlers :- Lookup
   [component :- (s/protocol EventHandler)]
