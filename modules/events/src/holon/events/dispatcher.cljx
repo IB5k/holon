@@ -1,58 +1,69 @@
 (ns holon.events.dispatcher
   (:require [holon.events.protocols :as p]
-            [holon.events.schema :refer (Lookup)]
+            [holon.events.schema :refer (EventKey Event Lookup)]
             [#+clj  com.stuartsierra.component
              #+cljs quile.component
              :as component :refer [Lifecycle]]
             #+clj  [schema.core :as s]
             #+cljs [schema.core :as s :include-macros true]))
 
-(defn validate-events [cmp]
-  (assert (satisfies? p/EventProducer cmp) "cmp must satisfy EventProducer for events to be validated")
-  (s/validate Lookup (p/events cmp))
-  (let [bus (first (filter #(satisfies? p/EventHandler %) (vals cmp)))]
-    (assert bus "component must depend on an event bus to validate-events")
-    (doseq [[event arities] (p/events cmp)]
-      (when-not (seq (filter #(% event) (p/event-handlers bus)))
-        (throw (ex-info (str "event handler missing for event: " event)
-                        {:event event
-                         :arities arities
-                         :component cmp})))))
-  cmp)
+(s/defn lookup
+  [key :- EventKey
+   lookups :- [Lookup]]
+  (filter #(% key) lookups))
 
-(defn dispatch! [cmp [event & args]]
-  (when-not (satisfies? p/EventProducer cmp)
-    (throw (ex-info "component must satisfy EventProducer to dispatch!"
-                    {:component cmp
-                     :event event
-                     :args args})))
-  (if-let [bus (first (filter #(satisfies? p/EventHandler %) (vals cmp)))]
-    (let [schema (->> (p/events cmp)
-                      (map #(% event)))]
-      (when (seq schema)
-        (when (< 1 (count schema))
-          (throw (ex-info (str "ambigious schema defined in EventProducer.events for event: " event)
-                          {:component cmp
-                           :event event
-                           :args args
-                           :schema schema})))
-        (s/validate (first schema) args))
-      (doseq [matcher (p/event-handlers bus)
-              :let [handler (matcher event)]
-              :when handler]
-        (apply handler args)))
-    (throw (ex-info "component must depend on an event bus to dispatch!"
-                    {:component cmp
-                     :event event
-                     :args args}))))
+(s/defn get-event-handlers
+  [cmp :- (s/protocol p/EventProducer)]
+  (->> (vals cmp)
+       (filter #(satisfies? p/EventHandler %))
+       (mapcat p/event-handlers)))
+
+(s/defn validate-events :- (s/protocol p/EventProducer)
+  [cmp :- (s/protocol p/EventProducer)]
+  (s/validate Lookup (p/event-schema cmp))
+  (let [handlers (get-event-handlers cmp)]
+    (assert (seq handlers)
+            "EventProducers must depend on component(s) that satisfies EventHandler")
+    (doseq [[key arities] (p/event-schema cmp)]
+      (when-not (seq (lookup key handlers))
+        (throw (ex-info (str "event handler missing for event: " event)
+                        {:event-key key
+                         :arities arities
+                         :component cmp}))))z
+    cmp))
+
+(s/defn get-event-schema
+  [cmp :- (s/protocol p/EventProducer)
+   key :- EventKey]
+  (let [event-schema (->> (p/event-schema cmp)
+                          (filter #(% event)))
+        info {:component cmp
+              :event event
+              :event-schema event-schema}]
+    (if (seq event-schema)
+      (if (< 1 (count event-schema))
+        (throw (ex-info (str "ambigious event-schema defined for event: " event) info))
+        (first event-schema))
+      (throw (ex-info (str "no event-schema defined for event: " event) info)))))
+
+(s/defn handle
+  [cmp :- (s/protocol p/EventProducer)
+   [key & args] :- Event])
+
+(s/defn dispatch!
+  [cmp :- (s/protocol p/EventProducer)
+   [key & args] :- Event]
+  (let [handlers (get-event-handlers cmp)]
+    (s/validate (get-event-schema cmp) args)
+    (doseq [matcher (p/event-handlers bus)
+            :let [handler (matcher key)]
+            :when handler]
+      (apply handler args))))
 
 (defrecord EventHandlerAggregator []
   Lifecycle
   (start [this]
-    (let [handlers (->> (vals this)
-                        (filter #(satisfies? p/EventHandler %))
-                        (mapcat p/event-handlers))]
-      (assoc this :handlers handlers)))
+    (assoc this :handlers (get-event-handlers this)))
   (stop [this] this)
   p/EventHandler
   (event-handlers [this] (:handlers this)))
