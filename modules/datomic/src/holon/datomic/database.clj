@@ -5,7 +5,8 @@
             [com.stuartsierra.component :as component :refer (Lifecycle)]
             [juxt.datomic.extras :refer (DatabaseReference DatomicConnection as-conn as-db to-ref-id to-entity-map EntityReference)]
             [plumbing.core :refer :all]
-            [schema.core :as s]))
+            [schema.core :as s])
+  (:import [datomic.peer Connection]))
 
 (defnk make-datomic-uri
   [ephemeral? :- s/Bool
@@ -47,12 +48,12 @@
     uri))
 
 (s/defrecord DatomicConn
-    [database
-     connection]
+    [database :- (s/protocol p/DatomicDatabase)
+     connection :- (s/maybe Connection)]
   Lifecycle
   (start [this]
     (assoc this :connection
-           (d/connect (get-in this [:database :uri]))))
+           (d/connect (url database))))
   (stop [this]
     (some-> this
             :connection
