@@ -1,6 +1,7 @@
 (ns holon.datascript.database
-  (:require [datascript :as d]
-            [holon.datascript.protocols :refer (DatomicConnection DatabaseReference DatascriptNorms DatomListener ReactiveDB)]
+  (:require [holon.datascript.protocols :refer (DatomicConnection DatabaseReference DatascriptNorms DatomListener ReactiveDB)]
+            [datascript :as d]
+            [ib5k.component.ctr :as ctr]
             [plumbing.core :refer-macros [defnk fnk <-]]
             [quile.component :refer (Lifecycle)]
             [schema.core :as s :include-macros true]))
@@ -72,8 +73,13 @@
   (unlisten-for! [this key path fragments]
     (swap! reactions update-in (concat [path] fragments) dissoc key)))
 
+(def new-datascript-db
+  (-> map->DatascriptDB
+      (ctr/wrap-class-validation DatascriptDB)
+      (ctr/wrap-kargs)))
+
 (s/defrecord DatascriptNormsConformer
-    [db]
+    [db :- (s/protocol DatabaseReference)]
   Lifecycle
   (start [this]
     (let [txes (->> (for [[ckey v] this
@@ -86,33 +92,26 @@
   (stop [this]
     this))
 
-(def new-datascript-db
-  (validated-ctr
-   {:map->cmp map->DatascriptDB
-    :opts {:schema [(s/maybe {s/Any s/Any})
-                    {}]}}))
+(def new-datascript-norms-conformer
+  (-> map->DatascriptNormsConformer
+      (ctr/wrap-class-validation DatascriptNormsConformer)
+      (ctr/wrap-using [:db])
+      (ctr/wrap-kargs)))
 
-(defrecord StaticDatascriptFixtures [txes]
-  Lifecycle
-  (start [this]
-    (validate-cmp this)
-    this)
-  (stop [this]
-    this)
+(s/defrecord StaticDatascriptNorms
+    [txes]
   DatascriptFixtures
   (txes [_]
     txes))
 
-(def new-datascript-fixtures
-  (validated-ctr
-   {:map->cmp map->StaticDatascriptFixtures
-    :opts {:txes [[[{s/Keyword s/Any}]]
-                  []]}}))
+(def new-datascript-static-norms
+  (-> map->StaticDatascriptNorms
+      (ctr/wrap-class-validation StaticDatascriptNorms)
+      (ctr/wrap-kargs)))
 
-(defprotocol DatascriptTXListener
-  (tx-handler [_]))
-
-(defrecord DatascriptTXListenerAggregator [db key]
+(s/defrecord DatascriptTXListenerAggregator
+    [db :- (s/protocol DatabaseReference)
+     key :- (s/maybe s/Str)]
   Lifecycle
   (start [this]
     (validate-cmp this)
@@ -130,7 +129,8 @@
     (unbind-query db key)
     this))
 
-(def new-datascript-tx-listener-aggregator
-  (validated-ctr
-   {:map->cmp map->DatascriptTXListenerAggregator
-    :using {:db (s/protocol DatabaseReference)}}))
+(def new-datascript-norms-conformer
+  (-> map->DatascriptTXListenerAggregator
+      (ctr/wrap-class-validation DatascriptTXListenerAggregator)
+      (ctr/wrap-using [:db])
+      (ctr/wrap-kargs)))
