@@ -12,10 +12,11 @@
 
 (defn set-key-ns
   [ns key]
-  (let [ns (cond-> ns (keyword? ns) name)]
-    (if (= "" ns)
-      key
-      (keyword ns (name key)))))
+  (let [ns (cond-> ns
+             (keyword? ns)
+             (->> ((juxt namespace name))
+                  (reduce #(or %1 %2))))]
+    (keyword (when-not (str/blank? ns) ns) (name key))))
 
 (defn split-keyword
   "split namespaced keyword into parts"
