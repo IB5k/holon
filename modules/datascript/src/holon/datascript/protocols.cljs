@@ -46,7 +46,6 @@
   (listen-for! [db key path fragments callback])
   (unlisten-for! [db key path fragments]))
 
-(defprotocol TXListener
-  (bind-query [db key q inputs callback])
-  (unbind-query [db key])
-  ( [db key query] [db key query inputs]))
+(defprotocol ReactiveDB
+  (bind [db f] [db f state])
+  (unbind [db state]))
