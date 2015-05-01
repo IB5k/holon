@@ -1,13 +1,14 @@
 (ns holon.datascript.database
   (:require [datascript :as d]
+            [holon.datascript.protocols :refer (DatomicConnection DatabaseReference DatascriptNorms DatomListener ReactiveDB)]
             [plumbing.core :refer-macros [defnk fnk <-]]
             [quile.component :refer (Lifecycle)]
             [schema.core :as s :include-macros true]))
 
 ;; ========== Lifecycle ==========
 
-(defn listen-reactions! [conn reactions-ref]
-  (d/listen! (as-conn conn)
+(defn listen-reactions! [db reactions-ref]
+  (d/listen! (as-conn db)
              (fn [tx-data]
                (doseq [datom (:tx-data tx-data)
                        [path m] @reactions-ref
@@ -15,35 +16,35 @@
                        [key callback] (get-in m fragments)]
                  (callback datom tx-data key)))))
 
-(defn clear-listeners! [conn]
+(defn clear-listeners! [db]
   (doseq [listener (:listeners (meta (as-conn conn)))]
     (d/unlisten! (as-conn db) listener)))
 
-(defn -bind-query
-  [db key q inputs callback]
-  (d/listen! (as-conn db) (prn-str key)
-             (fn [{:keys [tx-data db-before db-after] :as tx}]
-               (let [novelty (apply d/q q tx-data inputs)]
-                 (when (seq novelty)
-                   (callback tx)))))
-  key)
+(defn -bind
+  ([conn f]
+   (bind conn q (atom nil)))
+  ([conn f state]
+   (let [k (uuid/make-random-uuid)]
+     (reset! state (f (as-db conn)))
+     (d/listen! conn k (fn [tx-report]
+                         (let [novelty (f (:tx-data tx-report))]
+                           (when (seq novelty) ;; Only update if query results actually changed
+                             (reset! state (f (:db-after tx-report)))))))
+     (set! (.-__key state) k)
+     state)))
 
-(defn -unbind-query
-  [conn key]
-  (d/unlisten! (as-conn conn) (prn-str key)))
+(defn -unbind
+  [conn state]
+  (d/unlisten! conn (.-__key state)))
 
-(defrecord DatascriptDB [schema db-reference reactions]
+(s/defrecord DatascriptDB
+    [schema :- {s/Keyword {s/Keyword s/Keyword}}
+     reactions :- (s/maybe clojure.lang.Atom)
+     db-reference :- (s/maybe clojure.lang.Atom)]
   Lifecycle
   (start [this]
-    (validate-cmp this)
     (let [db-reference (d/create-conn schema)
-          reactions (atom {})
-          txes (->> (for [[ckey v] this
-                          :when (satisfies? DatascriptFixtures v)]
-                      (txes v))
-                    (mapcat identity))]
-      (doseq [tx txes]
-        (d/transact! db-reference tx))
+          reactions (atom {})]
       (listen-reactions! db-reference reactions)
       (assoc this
              :db-reference db-reference
@@ -58,61 +59,32 @@
   DatabaseReference
   (as-db [this]
     (as-db (as-conn this)))
-  TXListener
-  (bind-query [db key q inputs callback]
-    (-bind-query db key q inputs callback))
-  (unbind-query [db key]
+  ReactiveDB
+  (bind [db f]
+    (-bind db f))
+  (bind [db f state]
+    (-bind db f state))
+  (unbind [db key]
     (-unbind-query db key))
-  (reactive-q [db key query inputs]
-    (-react-q db key query inputs))
-  (reactive-q [db key query]
-    (reactive-q db key query []))
   DatomListener
   (listen-for! [this key path fragments callback]
     (swap! reactions assoc-in (concat [path] fragments [key]) callback))
   (unlisten-for! [this key path fragments]
     (swap! reactions update-in (concat [path] fragments) dissoc key)))
 
-(defrecord DatascriptDB [schema db-reference reactions]
+(s/defrecord DatascriptNormsConformer
+    [db]
   Lifecycle
   (start [this]
-    (validate-cmp this)
-    (let [db-reference (d/create-conn schema)
-          reactions (atom {})
-          txes (->> (for [[ckey v] this
+    (let [txes (->> (for [[ckey v] this
                           :when (satisfies? DatascriptFixtures v)]
                       (txes v))
                     (mapcat identity))]
       (doseq [tx txes]
-        (d/transact! db-reference tx))
-      (listen-reactions! db-reference reactions)
-      (assoc this
-             :db-reference db-reference
-             :reactions reactions)))
+        (d/transact! (as-conn db) tx))
+      this))
   (stop [this]
-    (clear-listeners! this)
-    (reset! reactions {})
-    this)
-  DatomicConnection
-  (as-conn [this]
-    db-reference)
-  DatabaseReference
-  (as-db [this]
-    (as-db (as-conn this)))
-  TXListener
-  (bind-query [db key q inputs callback]
-    (-bind-query db key q inputs callback))
-  (unbind-query [db key]
-    (-unbind-query db key))
-  (reactive-q [db key query inputs]
-    (-react-q db key query inputs))
-  (reactive-q [db key query]
-    (reactive-q db key query []))
-  DatomListener
-  (listen-for! [this key path fragments callback]
-    (swap! reactions assoc-in (concat [path] fragments [key]) callback))
-  (unlisten-for! [this key path fragments]
-    (swap! reactions update-in (concat [path] fragments) dissoc key)))
+    this))
 
 (def new-datascript-db
   (validated-ctr
