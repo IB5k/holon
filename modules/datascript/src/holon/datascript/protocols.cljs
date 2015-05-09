@@ -1,9 +1,10 @@
-(ns holon.datascript.protocols)
+(ns holon.datascript.protocols
+  (:require [datascript :as d]))
 
-(defprotocol DatomicConnection
+(defprotocol DatascriptConnection
   (as-conn [_]))
 
-(extend-protocol DatomicConnection
+(extend-protocol DatascriptConnection
   cljs.core.Atom
   (as-conn [c] c))
 
@@ -42,10 +43,8 @@
 (defprotocol DatascriptNorms
   (txes [_]))
 
-(defprotocol DatomListener
-  (listen-for! [db key path fragments callback])
-  (unlisten-for! [db key path fragments]))
+(defprotocol DatascriptTXListener
+  (tx-handler [_]))
 
 (defprotocol ReactiveDB
-  (bind [db f] [db f state])
-  (unbind [db state]))
+  (make-db-reaction [db f]))
