@@ -40,8 +40,3 @@
   [component :- (s/protocol p/EventProducer)
    event :- Event]
   (d/dispatch! component event))
-
-(def new-event-handler-aggregator
-  (-> d/map->EventHandlerAggregator
-      (ctr/wrap-class-validation EventHandlerAggregator)
-      (ctr/wrap-kargs)))

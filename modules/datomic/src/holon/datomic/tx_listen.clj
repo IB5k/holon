@@ -34,6 +34,12 @@
   (tap-tx-queue! [this]
     (async/tap (:tx-listen-mult this) (async/chan))))
 
+(def new-datomic-report-queue
+  (-> map->DatomicReportQueue
+      (ctr/wrap-class-validation DatomicReportQueue)
+      (ctr/wrap-using [:connection])
+      (ctr/wrap-kargs)))
+
 (s/defrecord DatomicTXListenerAggregator
     [tx-report-queue :- (s/protocol p/ListenDatomicReportQueue)]
   Lifecycle
@@ -57,3 +63,9 @@
       (fn [tx]
         (doseq [handler handlers]
           (handler tx))))))
+
+(def new-datomic-tx-listener-aggregator
+  (-> map->DatomicTXListenerAggregator
+      (ctr/wrap-class-validation DatomicTXListenerAggregator)
+      (ctr/wrap-using [:tx-report-queue])
+      (ctr/wrap-kargs)))

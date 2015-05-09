@@ -47,6 +47,21 @@
   (url [this]
     uri))
 
+(def new-datomic-database
+  (-> (fnk [ephemeral? :as opts]
+        ((if ephemeral?
+           db/map->EphemeralDatabase
+           db/map->DurableDatabase)
+         {:uri (db/make-datomic-uri opts)}))
+      (ctr/wrap-class-validation DurableDatabase)
+      (ctr/wrap-validation {:uri s/Str
+                            :db-name s/Str
+                            (s/optional-key :aws-secret-key) s/Str
+                            (s/optional-key :aws-access-key-id) s/Str
+                            :ephemeral? s/Bool})
+      (ctr/wrap-defaults {:ephemeral? false})
+      (ctr/wrap-kargs)))
+
 (s/defrecord DatomicConn
     [database :- (s/protocol p/DatomicDatabase)
      connection :- (s/maybe Connection)]
@@ -65,3 +80,9 @@
   DatomicConnection
   (as-conn [this]
     (:connection this)))
+
+(def new-datomic-connection
+  (-> map->DatomicConn
+      (ctr/wrap-class-validation DatomicConn)
+      (ctr/wrap-using [:database])
+      (ctr/wrap-kargs)))

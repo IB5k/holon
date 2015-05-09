@@ -67,3 +67,8 @@
   (stop [this] this)
   p/EventHandler
   (event-handlers [this] (:handlers this)))
+
+(def new-event-handler-aggregator
+  (-> map->EventHandlerAggregator
+      (ctr/wrap-class-validation EventHandlerAggregator)
+      (ctr/wrap-kargs)))

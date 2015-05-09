@@ -26,6 +26,12 @@
          (map p/norms)
          (apply merge))))
 
+(def new-datomic-norms-conformer
+  (-> map->DatomicNormsConformer
+      (ctr/wrap-class-validation DatomicNormsConformer)
+      (ctr/wrap-using [:connection])
+      (ctr/wrap-kargs)))
+
 (s/defrecord DatomicNormsResource
     [resource :- java.net.URL
      norms :- [s/Keyword]]
@@ -37,3 +43,8 @@
                  'db/fn datomic.function/construct
                  'base64 datomic.codec/base-64-literal}]
         (clojure.tools.reader/read (indexing-push-back-reader rdr))))))
+
+(def new-datomic-norms-resource
+  (-> map->DatomicNormsResource
+      (ctr/wrap-class-validation DatomicNormsResource)
+      (ctr/wrap-kargs)))
