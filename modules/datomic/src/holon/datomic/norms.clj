@@ -1,11 +1,12 @@
 (ns holon.datomic.norms
   (:require [holon.datomic.protocols :as p]
             [holon.datomic.utils :refer :all]
-            [datomic.api :as d]
             [clojure.java.io :as io]
             [clojure.tools.reader]
             [clojure.tools.reader.reader-types :refer (indexing-push-back-reader)]
             [com.stuartsierra.component :as component :refer (Lifecycle)]
+            [datomic.api :as d]
+            [ib5k.component.ctr :as ctr]
             [io.rkn.conformity :as c]
             [juxt.datomic.extras :refer (DatabaseReference DatomicConnection as-conn as-db to-ref-id to-entity-map EntityReference)]
             [plumbing.core :refer :all]
