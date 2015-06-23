@@ -21,10 +21,13 @@
     :version "0.1.0-SNAPSHOT"
     :description "datomic components"
     :root "modules/datomic"
-    :dependencies [:clojure
+    :dependencies [:async
+                   :clojure
                    :clojurescript
                    :component
                    :datomic
+                   [:logging :clj]
+                   :manifold
                    :schema]
     :test-namespaces '[holon.events-test]}
    :test
@@ -55,8 +58,8 @@
                      [deraen/boot-cljx "0.2.2"]
                      [ib5k/boot-component "0.1.2-SNAPSHOT"]
                      [jeluard/boot-notify "0.1.2"]]
-     :clojure       [[org.clojure/clojure "1.7.0-beta1"]]
-     :clojurescript [[org.clojure/clojurescript "0.0-3211"]]
+     :clojure       [[org.clojure/clojure "1.7.0-RC2"]]
+     :clojurescript [[org.clojure/clojurescript "0.0-3308"]]
      :component
      {:clj          [[com.stuartsierra/component "0.2.3"]]
       :cljs         [[quile/component-cljs "0.2.4"]]}
@@ -82,8 +85,10 @@
       :cljs         [[cljs-http "0.1.30"]
                      [camel-snake-kebab "0.3.1"]]}
      :logging
-     {:clj          [[com.taoensso/timbre "3.4.0"]]
+     {:clj          [[com.taoensso/timbre "3.4.0"]
+                     [org.clojure/tools.logging "0.3.1"]]
       :cljs         [[shodan "0.4.1"]]}
+     :manifold      [[manifold "0.1.0"]]
      :modular
      {:bidi         [[juxt.modular/bidi "0.9.2"]]
       :http-kit     [[juxt.modular/http-kit "0.5.4"]

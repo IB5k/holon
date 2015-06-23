@@ -1,38 +1,42 @@
 (ns holon.datomic.tx-listen
   (:require [holon.datomic.protocols :as p]
             [holon.datomic.utils :refer :all]
-            [datomic.api :as d]
             [clojure.core.async :as async]
             [com.stuartsierra.component :as component :refer (Lifecycle)]
+            [datomic.api :as d]
+            [ib5k.component.ctr :as ctr]
             [juxt.datomic.extras :refer (DatabaseReference DatomicConnection as-conn as-db to-ref-id to-entity-map EntityReference)]
+            [manifold.bus :as bus]
+            [manifold.stream :as stream]
             [plumbing.core :refer :all]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [taoensso.timbre :as log]))
 
 (s/defrecord DatomicReportQueue
     [connection :- (s/protocol DatomicConnection)]
   Lifecycle
   (start [this]
-    (let [tx-reports-ch (async/chan)
-          tx-listen-mult (async/mult tx-reports-ch)
-          queue (d/tx-report-queue (as-conn connection))]
+    (let [tx-reports (bus/event-bus)
+          queue (d/tx-report-queue (as-conn connection))
+          stopped? (atom false)]
       (async/thread
-        (try (while true
-               (let [report (.take queue)]
-                 (async/>!! tx-reports-ch report)))
-             (catch Exception e
-               (log/error "TX-REPORT-TAKE exception: " e)
-               (throw e))))
+        (while (not @stopped?)
+          (try (let [report (.take queue)]
+                 (bus/publish! tx-reports :tx report))
+               (catch Exception e
+                 (log/error "TX-REPORT-TAKE exception: " e)
+                 e))))
       (assoc this
-             :queue queue
-             :tx-reports-ch tx-reports-ch
-             :tx-listen-mult tx-listen-mult)))
+             :stop! (fn []
+                      (d/remove-tx-report-queue (as-conn connection))
+                      (reset! stopped? true))
+             :tx-reports tx-reports)))
   (stop [this]
-    (some-> (as-conn connection) d/remove-tx-report-queue)
-    (async/close! (:tx-reports-ch this))
+    (some-> this :stop! (apply []))
     this)
-  p/ListenDatomicReportQueue
-  (tap-tx-queue! [this]
-    (async/tap (:tx-listen-mult this) (async/chan))))
+  p/DatomicReportStream
+  (tx-stream [this]
+    (bus/subscribe (:tx-reports this) :tx)))
 
 (def new-datomic-report-queue
   (-> map->DatomicReportQueue
@@ -41,19 +45,19 @@
       (ctr/wrap-kargs)))
 
 (s/defrecord DatomicTXListenerAggregator
-    [tx-report-queue :- (s/protocol p/ListenDatomicReportQueue)]
+    [tx-report-queue :- (s/protocol p/DatomicReportStream)]
   Lifecycle
   (start [this]
     (let [handler (p/tx-handler this)
           ;; will be shutdown on system stop since tx-report-queue closes the queue channel
-          reports (p/tap-tx-queue! tx-report-queue)]
+          reports (p/tx-stream tx-report-queue)]
       (async/thread
-        (loop []
-          (when-let [report (async/<!! reports)]
-            (handler report))
-          (recur))))
-    this)
+        (stream/consume handler reports))
+      (assoc this
+             :stop! (fn []
+                      (stream/close! reports)))))
   (stop [this]
+    (some-> this :stop! (apply []))
     this)
   p/DatomicTXListener
   (tx-handler [this]

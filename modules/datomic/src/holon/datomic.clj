@@ -3,11 +3,11 @@
             [holon.datomic.norms :as norms]
             [holon.datomic.protocols :as p]
             [holon.datomic.schema :refer (DatomicSchema DatomicTX DatomicTXReport)]
-            [clojure.core.async.impl.protocols :as asyncp]
             [ib5k.component.ctr :as ctr]
             [juxt.datomic.extras :refer (DatomicConnection)]
             [schema.core :as s])
-  (:import [datomic.db Db DbId]))
+  (:import [datomic.db Db DbId]
+           [manifold.stream.core IEventSource]))
 
 ;; ========== DatomicDatabase ==========
 
@@ -24,9 +24,9 @@
 
 ;; ========== ListenDatomicReportQueue ==========
 
-(s/defn tap-tx-queue! :- (s/protocol asyncp/ReadPort)
-  [component :- (s/protocol p/ListenDatomicReportQueue)]
-  (p/tap-tx-queue! component))
+(s/defn tx-stream :- IEventSource
+  [component :- (s/protocol p/DatomicReportStream)]
+  (p/tx-stream component))
 
 ;; ========== DatomicTXListener ==========
 
