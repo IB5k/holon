@@ -4,17 +4,7 @@
       :scm {:url "https://github.com/ib5k/holon"}})
 
 (def modules
-  {:events
-   {:project 'ib5k.holon/events
-    :version "0.1.0-SNAPSHOT"
-    :description "event dispatcher"
-    :root "modules/events"
-    :dependencies [:clojure
-                   :clojurescript
-                   :component
-                   :schema]
-    :test-namespaces '[holon.events-test]}
-   :component
+  {:component
    {:project 'ib5k.holon/component
     :version "0.1.0-SNAPSHOT"
     :description "utils for component systems"
@@ -26,6 +16,17 @@
                    :aop]
     :test-namespaces '[holon.maker-test
                        holon.component-test]}
+   :datomic
+   {:project 'ib5k.holon/datomic
+    :version "0.1.0-SNAPSHOT"
+    :description "datomic components"
+    :root "modules/datomic"
+    :dependencies [:clojure
+                   :clojurescript
+                   :component
+                   :datomic
+                   :schema]
+    :test-namespaces '[holon.events-test]}
    :test
    {:project 'ib5k.holon/test
     :version "0.1.0-SNAPSHOT"
@@ -61,8 +62,11 @@
       :cljs         [[quile/component-cljs "0.2.4"]]}
      :datascript    [[datascript "0.10.0"]]
      :datomic       [[com.datomic/datomic-pro "0.9.5153"]
-                     [juxt.modular/datomic "0.2.1"]
-                     [io.rkn/conformity "0.3.4"]]
+                     [juxt.modular/datomic "0.2.1"
+                      :exclusions [com.datomic/datomic-free]]
+                     [io.rkn/conformity "0.3.4"
+                      :exclusions [com.datomic/datomic-free]]
+                     [datomic-schema "1.3.0"]]
      :email         [[com.draines/postal "1.11.3"]]
      :filesystem
      {:io           [[me.raynes/fs "1.4.6"]]}
