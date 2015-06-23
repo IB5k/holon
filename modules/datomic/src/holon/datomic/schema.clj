@@ -2,11 +2,22 @@
   (:require [schema.core :as s])
   (:import [datomic.db DbId]))
 
+(s/defschema DatomicDatom
+  [(s/one datomic.db.DbId "entity id")
+   (s/one s/Keyword "attr")
+   (s/one s/Any "value")
+   (s/one s/Inst "time")])
+
 (s/defschema DatomicTX
   [(s/one s/Keyword "db/fn")
    (s/one datomic.db.DbId "id")
    (s/one s/Keyword "attr")
    (s/one s/Any "value")])
+
+(s/defschema DatomicTXReport
+  {:db-before datomic.db.Db
+   :db-after datomic.db.Db
+   :tx-data [DatomicTX]})
 
 (s/defschema DatomicSchema
   {:db/id DbId

@@ -2,15 +2,12 @@
   (:require [holon.datomic.database :as db]
             [holon.datomic.norms :as norms]
             [holon.datomic.protocols :as p]
-            [holon.datomic.schema :refer (DatomicSchema DatomicTX)]
+            [holon.datomic.schema :refer (DatomicSchema DatomicTX DatomicTXReport)]
             [clojure.core.async.impl.protocols :as asyncp]
             [ib5k.component.ctr :as ctr]
             [juxt.datomic.extras :refer (DatomicConnection)]
             [schema.core :as s])
-  (:import [holon.datomic.database EphemeralDatabase DurableDatabase]
-           [holon.datomic.norms DatomicNormsConformer DatomicNormsResource]
-           [holon.datomic.tx-listen DatomicReportQueue DatomicTXListenerAggregator]
-           [datomic.db Db DbId]))
+  (:import [datomic.db Db DbId]))
 
 ;; ========== DatomicDatabase ==========
 
@@ -33,9 +30,7 @@
 
 ;; ========== DatomicTXListener ==========
 
-(s/defn tx-handler :- (s/make-fn-schema [[s/Any]] [[{:db-before datomic.db.Db
-                                                     :db-after datomic.db.Db
-                                                     :tx-data [DatomicTX]}]])
+(s/defn tx-handler :- (s/make-fn-schema [[s/Any]] [[DatomicTXReport]])
   [component :- (s/protocol p/DatomicTXListener)]
   (p/tx-handler component))
 
