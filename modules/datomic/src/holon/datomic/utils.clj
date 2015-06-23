@@ -100,6 +100,52 @@
        (to-ref-id)
        (d/pull (as-db connection) '[*])))
 
+(defn entity-exists?
+  "returns the entity id if it exists"
+  [connection id]
+  (ffirst (d/q '[:find ?id
+                 :in $ ?id
+                 :where
+                 [?id]]
+               (as-db connection) id)))
+
+(defn find-entity
+  "returns the entity if it exists"
+  ([connection id]
+   (when (entity-exists? connection id)
+     (to-entity-map id connection)))
+  ([connection id id-attr]
+   (let [db (as-db connection)]
+     (some->> id
+              (d/q '[:find ?e
+                     :in $ ?id-attr ?id
+                     :where
+                     [?e ?id-attr ?id]]
+                   db id-attr id)
+              ffirst
+              (d/entity db)))))
+
+(defn update-entity!
+  "updates an entity and returns it"
+  [connection id attrs]
+  @(d/transact (as-conn connection) [(assoc attrs :db/id id)])
+  (d/entity (as-db connection) id))
+
+(defn retract-attrs!
+  [connection id attrs]
+  @(d/transact (as-conn connection) (->> (for [[attr v] attrs]
+                                           (if-not (coll? v)
+                                             [[:db/retract id attr v]]
+                                             (for [v v]
+                                               [:db/retract id attr v])))
+                                         (mapcat identity)))
+  (d/entity (as-db connection) id))
+
+(defn delete-entity!
+  [connection id]
+  @(d/transact (as-conn connection) [[:db.fn/retractEntity id]])
+  nil)
+
 (defn create-entities! [connection entities]
   (let [temps (->> entities
                    (mapv #(assoc % :db/id (d/tempid :db.part/user))))
