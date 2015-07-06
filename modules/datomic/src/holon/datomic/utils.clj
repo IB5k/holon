@@ -121,7 +121,7 @@
                      :in $ ?id-attr ?id
                      :where
                      [?e ?id-attr ?id]]
-                   db id-attr id)
+                   db id-attr)
               ffirst
               (d/entity db)))))
 
