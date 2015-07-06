@@ -17,14 +17,14 @@
   Lifecycle
   (start [this]
     (let [norms-map (p/norms this)]
-      (c/ensure-conforms (as-conn connection) norms-map (keys norms-map)))
+      (c/ensure-conforms (as-conn connection) norms-map))
     this)
   (stop [this] this)
   p/DatomicNorms
   (norms [this]
     (->> (vals this)
          (filter #(satisfies? p/DatomicNorms %))
-         (map p/norms)
+         (mapv p/norms)
          (apply merge))))
 
 (def new-datomic-norms-conformer
