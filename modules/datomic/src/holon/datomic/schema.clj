@@ -50,7 +50,7 @@
     (let [map-checker (s/subschema-walker schema)]
       (fn [e]
         (or (and (map? e) ;; allow entities that have already been realized as maps
-                 e)
+                 (map-checker e))
             (when-not (entity? e)
               (macros/validation-error this e
                 (list 'instance? datomic.Entity (sutils/value-name e))))
