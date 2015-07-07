@@ -13,11 +13,12 @@
             [schema.core :as s]))
 
 (s/defrecord DatomicNormsConformer
-    [connection :- (s/protocol DatomicConnection)]
+    [connection :- (s/protocol DatomicConnection)
+     norms :- (s/maybe [s/Keyword])]
   Lifecycle
   (start [this]
     (let [norms-map (p/norms this)]
-      (c/ensure-conforms (as-conn connection) norms-map))
+      (c/ensure-conforms (as-conn connection) norms-map (or norms (keys norms-map))))
     this)
   (stop [this] this)
   p/DatomicNorms
@@ -34,8 +35,7 @@
       (ctr/wrap-kargs)))
 
 (s/defrecord DatomicNormsResource
-    [resource :- java.net.URL
-     norms :- [s/Keyword]]
+    [resource :- java.net.URL]
   p/DatomicNorms
   (norms [_]
     (with-open [rdr (java.io.PushbackReader. (io/reader resource))]
