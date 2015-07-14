@@ -11,10 +11,12 @@
    (s/one s/Inst "time")])
 
 (s/defschema DatomicTX
-  [(s/one s/Keyword "db/fn")
-   (s/one datomic.db.DbId "id")
-   (s/one s/Keyword "attr")
-   (s/one s/Any "value")])
+  (s/either {:db/id s/Any
+             s/Keyword s/Any}
+            [(s/one s/Keyword "db/fn")
+             (s/one datomic.db.DbId "id")
+             (s/one s/Keyword "attr")
+             (s/one s/Any "value")]))
 
 (s/defschema DatomicTXReport
   {:db-before datomic.db.Db

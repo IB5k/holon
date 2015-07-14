@@ -1,6 +1,7 @@
 (ns holon.datomic.norms
   (:require [holon.datomic.protocols :as p]
             [holon.datomic.utils :refer :all]
+            [holon.datomic.schema :refer :all]
             [clojure.java.io :as io]
             [clojure.tools.reader]
             [clojure.tools.reader.reader-types :refer (indexing-push-back-reader)]
@@ -34,11 +35,24 @@
       (ctr/wrap-using [:connection])
       (ctr/wrap-kargs)))
 
-(s/defrecord DatomicNormsResource
-    [resource :- java.net.URL]
+(s/defrecord DatomicNorms
+    [requires :- [s/Keyword]
+     txes :- [[DatomicTX]]]
   p/DatomicNorms
   (norms [_]
-    (with-open [rdr (java.io.PushbackReader. (io/reader resource))]
+    {:requires requires
+     :txes txes}))
+
+(def new-datomic-norms
+  (-> map->DatomicNorms
+      (ctr/wrap-class-validation DatomicNorms)
+      (ctr/wrap-kargs)))
+
+(s/defrecord DatomicNormsResource
+    [resource :- s/Str]
+  p/DatomicNorms
+  (norms [_]
+    (with-open [rdr (java.io.PushbackReader. (io/reader (io/resource resource)))]
       (binding [clojure.tools.reader/*data-readers*
                 {'db/id datomic.db/id-literal
                  'db/fn datomic.function/construct
