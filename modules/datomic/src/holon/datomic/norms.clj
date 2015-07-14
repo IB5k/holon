@@ -36,12 +36,13 @@
       (ctr/wrap-kargs)))
 
 (s/defrecord DatomicNorms
-    [requires :- [s/Keyword]
+    [key :- s/Keyword
+     requires :- [s/Keyword]
      txes :- [[DatomicTX]]]
   p/DatomicNorms
   (norms [_]
-    {:requires requires
-     :txes txes}))
+    {key {:requires requires
+          :txes txes}}))
 
 (def new-datomic-norms
   (-> map->DatomicNorms
