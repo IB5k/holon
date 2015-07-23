@@ -35,18 +35,15 @@
       (ctr/wrap-using [:connection])
       (ctr/wrap-kargs)))
 
-(s/defrecord DatomicNorms
-    [key :- s/Keyword
-     requires :- [s/Keyword]
-     txes :- [[DatomicTX]]]
+(s/defrecord DatomicNormsStatic
+    [norms :- DatomicNorms]
   p/DatomicNorms
   (norms [_]
-    {key {:requires requires
-          :txes txes}}))
+    norms))
 
-(def new-datomic-norms
-  (-> map->DatomicNorms
-      (ctr/wrap-class-validation DatomicNorms)
+(def new-datomic-norms-static
+  (-> map->DatomicNormsStatic
+      (ctr/wrap-class-validation DatomicNormsStatic)
       (ctr/wrap-kargs)))
 
 (s/defrecord DatomicNormsResource

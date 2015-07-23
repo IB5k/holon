@@ -39,6 +39,10 @@
    :db/cardinality (s/enum :db.cardinality/one
                            :db.cardinality/many)})
 
+(s/defschema DatomicNorms
+  {s/Keyword {:txes [[DatomicTX]]
+              (s/optional-key :requires) [s/Keyword]}})
+
 (defn entity?
   [e]
   (instance? datomic.Entity e))
