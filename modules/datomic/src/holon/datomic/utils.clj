@@ -4,7 +4,7 @@
             [plumbing.core :refer :all]
             [schema.core :as s]
             [datomic.api :as d]
-            [juxt.datomic.extras :refer (DatomicConnection as-conn as-db to-ref-id to-entity-map EntityReference)]))
+            [juxt.datomic.extras :refer (DatomicConnection DatabaseReference EntityReference as-conn as-db to-ref-id to-entity-map)]))
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
@@ -95,26 +95,34 @@
   (to-ref-id [em] (:db/id em))
   (to-entity-map [em _] em))
 
-(defn pull-ref [connection ref]
-  (->> ref
-       (to-ref-id)
-       (d/pull (as-db connection) '[*])))
+(s/defn pull-ref
+  ([connection ref] (pull-ref connection ref '[*]))
+  ([connection :- (s/protocol DatabaseReference)
+    ref :- (s/protocol EntityReference)
+    pattern]
+   (->> ref
+        (to-ref-id)
+        (d/pull (as-db connection) '[*]))))
 
-(defn entity-exists?
+(s/defn entity-exists?
   "returns the entity id if it exists"
-  [connection id]
+  [connection :- (s/protocol DatabaseReference)
+   id :- s/Num]
   (ffirst (d/q '[:find ?id
                  :in $ ?id
                  :where
                  [?id]]
                (as-db connection) id)))
 
-(defn find-entity
+(s/defn find-entity
   "returns the entity if it exists"
-  ([connection id]
+  ([connection :- (s/protocol DatabaseReference)
+    id :- s/Num]
    (when (entity-exists? connection id)
      (to-entity-map id connection)))
-  ([connection id id-attr]
+  ([connection :- (s/protocol DatabaseReference)
+    id :- s/Num
+    id-attr :- s/Keyword]
    (let [db (as-db connection)]
      (some->> id
               (d/q '[:find ?e
@@ -125,14 +133,33 @@
               ffirst
               (d/entity db)))))
 
-(defn update-entity!
+(s/defn last-modified
+  [connection :- (s/protocol DatabaseReference)
+   ref :- (s/protocol EntityReference)]
+  (->> ref
+       to-ref-id
+       (d/q '[:find (max ?when)
+              :in $ ?e
+              :where
+              [?tx :db/txInstant ?when]
+              [?e _ _ ?tx]]
+            (as-db connection))
+       ffirst))
+
+(s/defn update-entity!
   "updates an entity and returns it"
-  [connection id attrs]
+  [connection :- (s/both (s/protocol DatabaseReference)
+                         (s/protocol DatomicConnection))
+   id :- s/Num
+   attrs :- {s/Keyword s/Any}]
   @(d/transact (as-conn connection) [(assoc attrs :db/id id)])
   (d/entity (as-db connection) id))
 
-(defn retract-attrs!
-  [connection id attrs]
+(s/defn retract-attrs!
+  [connection :- (s/both (s/protocol DatabaseReference)
+                         (s/protocol DatomicConnection))
+   id :- s/Num
+   attrs :- {s/Keyword s/Any}]
   @(d/transact (as-conn connection) (->> (for [[attr v] attrs]
                                            (if-not (coll? v)
                                              [[:db/retract id attr v]]
@@ -141,12 +168,15 @@
                                          (mapcat identity)))
   (d/entity (as-db connection) id))
 
-(defn delete-entity!
-  [connection id]
+(s/defn delete-entity!
+  [connection :- (s/protocol DatomicConnection)
+   id :- s/Num]
   @(d/transact (as-conn connection) [[:db.fn/retractEntity id]])
   nil)
 
-(defn create-entities! [connection entities]
+(s/defn create-entities!
+  [connection :- (s/protocol DatomicConnection)
+   entities :- [{s/Keyword s/Any}]]
   (let [temps (->> entities
                    (mapv #(assoc % :db/id (d/tempid :db.part/user))))
         {:keys [db-after tempids]} @(d/transact (as-conn connection) temps)]
@@ -155,20 +185,26 @@
                     (partial d/resolve-tempid db-after tempids)
                     :db/id)))))
 
-(defn create-entity! [connection entity]
+(s/defn create-entity!
+  [connection :- (s/protocol DatomicConnection)
+   entity :- {s/Keyword s/Any}]
   (first (create-entities! connection [entity])))
 
-(defn attribute-exists? [connection attribute]
+(s/defn attribute-exists?
+  [connection :- (s/protocol DatabaseReference)
+   attribute :- s/Keyword]
   (some->> attribute
            (d/q '[:find ?c
-                :in $ ?attr
-                :where [?c :db/ident ?attr]]
-              (as-db connection))
+                  :in $ ?attr
+                  :where [?c :db/ident ?attr]]
+                (as-db connection))
            ffirst))
 
-(defn confirm-attributes!
+(s/defn confirm-attributes!
   "transacts attributes that do not exist"
-  [connection attributes schema-fn]
+  [connection :- (s/protocol DatomicConnection)
+   attributes :- [s/Keyword]
+   schema-fn :- (s/make-fn-schema {s/Keyword s/Any} [[s/Keyword]])]
   (some->> (for [attr attributes
                  :when (not (attribute-exists? connection attr))]
              (assoc (schema-fn attr)
