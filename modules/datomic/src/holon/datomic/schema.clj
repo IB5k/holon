@@ -43,6 +43,11 @@
   {s/Keyword {:txes [[DatomicTX]]
               (s/optional-key :requires) [s/Keyword]}})
 
+(s/defschema EntityLookup
+  (s/either (s/named s/Num "entity id")
+            [(s/one s/Keyword "attr")
+             (s/one s/Any "unique value")]))
+
 (defn entity?
   [e]
   (instance? datomic.Entity e))

@@ -117,11 +117,11 @@
 (s/defn find-entity
   "returns the entity if it exists"
   ([connection :- (s/protocol DatabaseReference)
-    id :- s/Num]
+    id :- s/Any]
    (when (entity-exists? connection id)
      (to-entity-map id connection)))
   ([connection :- (s/protocol DatabaseReference)
-    id :- s/Num
+    id :- s/Any
     id-attr :- s/Keyword]
    (let [db (as-db connection)]
      (some->> id
@@ -150,7 +150,7 @@
   "updates an entity and returns it"
   [connection :- (s/both (s/protocol DatabaseReference)
                          (s/protocol DatomicConnection))
-   id :- s/Num
+   id :- EntityLookup
    attrs :- {s/Keyword s/Any}]
   @(d/transact (as-conn connection) [(assoc attrs :db/id id)])
   (d/entity (as-db connection) id))
@@ -158,7 +158,7 @@
 (s/defn retract-attrs!
   [connection :- (s/both (s/protocol DatabaseReference)
                          (s/protocol DatomicConnection))
-   id :- s/Num
+   id :- EntityLookup
    attrs :- {s/Keyword s/Any}]
   @(d/transact (as-conn connection) (->> (for [[attr v] attrs]
                                            (if-not (coll? v)
@@ -170,7 +170,7 @@
 
 (s/defn delete-entity!
   [connection :- (s/protocol DatomicConnection)
-   id :- s/Num]
+   id :- EntityLookup]
   @(d/transact (as-conn connection) [[:db.fn/retractEntity id]])
   nil)
 
