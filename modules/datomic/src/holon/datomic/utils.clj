@@ -1,5 +1,6 @@
 (ns holon.datomic.utils
-  (:require [clojure.set :as set]
+  (:require [holon.datomic.schema :refer :all]
+            [clojure.set :as set]
             [clojure.string :as str]
             [plumbing.core :refer :all]
             [schema.core :as s]
