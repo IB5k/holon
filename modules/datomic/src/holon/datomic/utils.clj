@@ -99,11 +99,11 @@
 (s/defn pull-ref
   ([connection ref] (pull-ref connection ref '[*]))
   ([connection :- (s/protocol DatabaseReference)
-    ref :- (s/protocol EntityReference)
-    pattern]
+    pattern
+    ref :- (s/protocol EntityReference)]
    (->> ref
         (to-ref-id)
-        (d/pull (as-db connection) '[*]))))
+        (d/pull (as-db connection) pattern))))
 
 (s/defn entity-exists?
   "returns the entity id if it exists"
