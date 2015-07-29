@@ -163,9 +163,9 @@
    attrs :- {s/Keyword s/Any}]
   @(d/transact (as-conn connection) (->> (for [[attr v] attrs]
                                            (if-not (coll? v)
-                                             [[:db/retract id attr v]]
+                                             [[:db/retract (to-ref-id id) attr v]]
                                              (for [v v]
-                                               [:db/retract id attr v])))
+                                               [:db/retract (to-ref-id id) attr v])))
                                          (mapcat identity)))
   (d/entity (as-db connection) id))
 
