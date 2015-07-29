@@ -97,7 +97,7 @@
   (to-entity-map [em _] em))
 
 (s/defn pull-ref
-  ([connection ref] (pull-ref connection ref '[*]))
+  ([connection ref] (pull-ref connection '[*] ref))
   ([connection :- (s/protocol DatabaseReference)
     pattern
     ref :- (s/protocol EntityReference)]
