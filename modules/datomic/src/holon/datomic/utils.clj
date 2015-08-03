@@ -94,6 +94,9 @@
 (extend-protocol EntityReference
   clojure.lang.PersistentArrayMap
   (to-ref-id [em] (:db/id em))
+  (to-entity-map [em _] em)
+  clojure.lang.PersistentHashMap
+  (to-ref-id [em] (:db/id em))
   (to-entity-map [em _] em))
 
 (s/defn pull-ref
