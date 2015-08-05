@@ -5,9 +5,9 @@
             [holon.datomic.schema :refer (DatomicSchema DatomicTX DatomicTXReport)]
             [ib5k.component.ctr :as ctr]
             [juxt.datomic.extras :refer (DatomicConnection)]
+            [manifold.stream :as m]
             [schema.core :as s])
-  (:import [datomic.db Db DbId]
-           [manifold.stream.core IEventSource]))
+  (:import [datomic.db Db DbId]))
 
 ;; ========== DatomicDatabase ==========
 
@@ -24,7 +24,7 @@
 
 ;; ========== ListenDatomicReportQueue ==========
 
-(s/defn tx-stream :- IEventSource
+(s/defn tx-stream :- (s/pred m/sourceable?)
   [component :- (s/protocol p/DatomicReportStream)]
   (p/tx-stream component))
 

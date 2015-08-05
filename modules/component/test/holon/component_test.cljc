@@ -1,27 +1,29 @@
 (ns holon.component-test
-  (:require [holon.component :as cmp]
+  (:require [holon.component :as cmp :refer (new-system start)]
             [holon.test
-             :refer (#+clj with-system with-system-fixture *system*)
-             #+cljs
-             :refer-macros #+cljs (with-system)]
-            [holon.component :refer (new-system start)]
-            #+clj  [clojure.test :refer :all]
-            #+cljs [cemerick.cljs.test :as t]
-            [#+clj  com.stuartsierra.component
-             #+cljs quile.component
+             :refer (#?(:clj with-system) with-system-fixture *system*)
+             #?@(:cljs
+                 [:refer-macros (with-system)])]
+            #?@
+            (:clj
+             [[clojure.test :refer :all]]
+             :cljs
+             [[cemerick.cljs.test :as t]])
+            [#?(:clj
+                com.stuartsierra.component
+                :cljs
+                quile.component)
              :as component :refer [Lifecycle system-map]]
             [ib5k.component.ctr :as ctr]
             [ib5k.component.using-schema :as us]
             [plumbing.core :refer [map-vals]]
-            #+clj  [clojure.test :refer :all]
-            #+clj  [schema.core :as s]
-            #+cljs [schema.core :as s :include-macros true]
+            [schema.core :as s #?@(:cljs [:include-macros true])]
             [schema.test])
-  #+cljs
-  (:require-macros [cemerick.cljs.test
-                    :refer (is deftest with-test run-tests testing test-var use-fixtures)]))
+  #?(:cljs
+     (:require-macros [cemerick.cljs.test
+                       :refer (is deftest with-test run-tests testing test-var use-fixtures)]))
 
-(use-fixtures :once schema.test/validate-schemas)
+  (use-fixtures :once schema.test/validate-schemas))
 
 (defprotocol TestProtocol
   (get-key [this key]))
@@ -45,7 +47,7 @@
    :test-user
    {:cmp (map->TestUser {})
     :using {:cmp (s/protocol TestProtocol)}
-    #+clj :co-using #+clj {:*cmp (s/protocol TestProtocol)}}})
+    #?@(:clj [:co-using {:*cmp (s/protocol TestProtocol)}])}})
 
 (deftest extract-key-test
   (testing "pull key out of map"
@@ -88,17 +90,17 @@
        (= :test (:arg (:test-user *system*)))))))
 
 (deftest start-test
-  #+clj
-  (testing "start associates co-dependencies"
-    (is
-     (with-system (with-meta (new-system components)
-                    {:holon.test/start cmp/start})
-       (instance? TestComponent
-                  @(:*cmp (:test-user *system*))))))
+  #?(:clj
+     (testing "start associates co-dependencies"
+       (is
+        (with-system (with-meta (new-system components)
+                       {:holon.test/start cmp/start})
+          (instance? TestComponent
+                     @(:*cmp (:test-user *system*)))))))
 
   (testing "start validates class schema"
     (is
-     (thrown? #+clj Exception #+cljs js/Error
+     (thrown? #?(:clj Exception :cljs js/Error)
               (with-system (with-meta (system-map :test (->TestComponent "not a key"))
                              {:holon.test/start cmp/start})
                 *system*)))))
