@@ -97,7 +97,9 @@
   (to-entity-map [em _] em)
   clojure.lang.PersistentHashMap
   (to-ref-id [em] (:db/id em))
-  (to-entity-map [em _] em))
+  (to-entity-map [em _] em)
+  clojure.lang.PersistentVector
+  (to-ref-id [id] (first id)))
 
 (s/defn pull-ref
   ([connection ref] (pull-ref connection '[*] ref))
@@ -170,7 +172,7 @@
                                              (for [v v]
                                                [:db/retract (to-ref-id id) attr v])))
                                          (mapcat identity)))
-  (d/entity (as-db connection) id))
+  (d/entity (as-db connection) (to-ref-id id)))
 
 (s/defn delete-entity!
   [connection :- (s/protocol DatomicConnection)
